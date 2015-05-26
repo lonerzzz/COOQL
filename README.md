@@ -11,7 +11,7 @@ For example, the following statements can readily cause errors that are only det
 resultSet.getInt( "name" );	// Where 'name' is text and not an integer.
 ```
 
-## What COOQL is:
+### What COOQL is:
 
 COOQL provides a programmatic way of using the the CQL language without encountering runtime errors due to poorly formatted CQL statements or statements that attempt to perform operations that are not permitted or possible for the current table, column or key. The COOQL API generator interrogates the specified keyspace to create an API to the database.
 
@@ -24,7 +24,7 @@ int readingCount = (Integer)cooql.SELECT().FROM_sensorReading()._COUNT_STAR()
 		.executeQuery().populateObject( Integer.class );
 ```
 
-## What COOQL is not:
+### What COOQL is not:
 
 COOQL is not an Object Relational Mapper (ORM). It is not intended to provide transactional abilities or somehow augment the Cassandra database functionality. It attempts to avoid database boilerplate code differently than an ORM and without hiding the query mechanisms that the CQL language provides.
 
