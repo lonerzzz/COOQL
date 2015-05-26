@@ -26,7 +26,7 @@ int readingCount = (Integer)cooql.SELECT().FROM_sensorReading()._COUNT_STAR()
 
 ### What COOQL is not:
 
-COOQL is not an Object Relational Mapper (ORM). It is not intended to provide transactional abilities or somehow augment the Cassandra database functionality. It attempts to avoid database boilerplate code differently than an ORM and without hiding the query mechanisms that the CQL language provides.
+COOQL is not an Object Relational Mapper (ORM). It is not intended to provide transactional abilities or somehow augment the Cassandra database functionality. It attempts to avoid database access boilerplate code differently than an ORM and without hiding the query mechanisms that the CQL language provides.
 
 Use of the API should be generally intuitive. It is most effectively used with a method completion interface such as in eclipse or other modern IDEs.
 
@@ -69,6 +69,10 @@ Once the API is generated, it can be used as follows:
 
 Insert Example:
 
+```
+	cooql.SELECT().FROM_subscriberDetail._unitId()._updateDataList()
+		.WHERE_subscriberId_AND_unitId_EQ( subscriberId, unitId );
+```
 
 Select Example:
 
