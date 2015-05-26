@@ -76,7 +76,7 @@ Select Example:
 
 ```
 	COOQLResultSet_clientDetail resultSet =
-		cooql.SELECT().FROM_clientDetail()._sensorUnitId()._pendingUpdateCount()
+		cooql.SELECT().FROM_clientDetail()._unitId()._pendingUpdateCount()
 			.WHERE_subscriberId_AND_unitId_EQ( subscriberId, unitId ).executeQuery();
 	RowIterator iterator = resultSet.iterator();
 	COOQLRow_clientDetail row;
