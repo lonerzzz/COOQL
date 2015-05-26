@@ -96,4 +96,4 @@ Delete Example:
 
 TBD
 
-For more examples, information about commercial licensing and access to the larger guide, please visit our COOQL page at onbalancetech.com/COOQL.
+For more examples, information about commercial licensing and access to the larger guide, please visit our COOQL page at onbalancetech.com/COOQL (TBD).
