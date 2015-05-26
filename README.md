@@ -5,7 +5,7 @@ The Cassandra Object Oriented Query Language (COOQL) is a Domain Specific Langua
 
 The primary purpose of COOQL is to avoid runtime CQL errors and data type errors that arise because of the use of text as an intermediary between the database and the application. The API also prevents runtime errors due to operations that would violate CQL rules.
 
-For example, the following statements can cause readily cause errors that are only detected at runtime
+For example, the following statements can readily cause errors that are only detected at runtime
 
 ```
 resultSet.getInt( "name" );	// Where 'name' is text and not an integer.
