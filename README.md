@@ -15,12 +15,12 @@ COOQL provides a programmatic way of using the the CQL language without encounte
 
 The API represents all of the possible ways of accessing and manipulating the data in the form of a fluent API. To those who are unfamiliar, a fluent API is one where the output of one method links to the next possible operations such that a logical series of operations can be chained together as shown below.
 
-'''
+```
 cooql.SELECT().FROM_sensorReading()._COUNT_STAR()
 		.WHERE_subscriberId_AND_unitId_EQ( subscriberId, unitId )
 		.AND().time_GTE( startingTime ).AND().time_LTE( endingTime )
 		.executeQuery().populateObject( Integer.class );
-'''
+```
 
 ## What COOQL is not:
 
