@@ -32,7 +32,20 @@ Use of the API should be generally intuitive. It is most effectively used with a
 
 ## Using COOQL
 
-So here is how you use COOQL: TBD
+So here is how you use COOQL:
+
+Assuming the dependencies are met:
+
+```
+asm-4.0.jar
+cassandra-driver-core-2.1.4.jar
+guava-17.0.jar
+log4j-1.2.5.jar
+metrics-core-3.0.2.jar
+netty-3.9.0.Final.jar
+netty-all-4.0.21.Final.jar
+slf4j-api-1.7.7.jar
+```
 
 Given a database table declared as follows:
 
