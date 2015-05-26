@@ -1,7 +1,7 @@
 # COOQL
 An object oriented fluent API for performing CRUD operations on a Cassandra database.
 
-The Cassandra Object Oriented Query Language (COOQL) is a Domain Specific Language (DSL) extension to the Datastax client that provides a way to write Cassandra Query Language (CQL) statements without writing CQL strings. Instead CQL statements are written using java methods.
+The Cassandra Object Oriented Query Language (COOQL) is a Domain Specific Language (DSL) wrapper for the Datastax Cassandra client that provides a way to write Cassandra Query Language (CQL) statements without writing CQL strings. Instead CQL statements are written using java methods.
 
 The primary purpose of COOQL is to avoid runtime CQL errors and data type errors that arise because of the use of text as an intermediary between the database and the application. The API also prevents runtime errors due to operations that would violate CQL rules.
 
