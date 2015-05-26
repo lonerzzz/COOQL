@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS "subscriberDetail" (
 	"subscriberId" varchar,
 	"unitId" int,
 	"updateDataList" blob,			// Data to send to the unit
-	PRIMARY KEY ( "subscriberId", "unitId" )
+	"version" varchar,
+	PRIMARY KEY ( ("subscriberId", "unitId"), "version" )
 );
 ```
 
@@ -69,18 +70,30 @@ Once the API is generated, it can be used as follows:
 
 Insert Example:
 
-```
-	cooql.SELECT().FROM_subscriberDetail._unitId()._updateDataList()
-		.WHERE_subscriberId_AND_unitId_EQ( subscriberId, unitId );
-```
+TBD
 
 Select Example:
 
+```
+	COOQLResultSet_clientDetail resultSet =
+		cooql.SELECT().FROM_clientDetail()._sensorUnitId()._pendingUpdateCount()
+			.WHERE_subscriberId_AND_unitId_EQ( subscriberId, unitId ).executeQuery();
+	RowIterator iterator = resultSet.iterator();
+	COOQLRow_clientDetail row;
+	int totalUpdateCount = 0;
+	while (iterator.hasNext())
+	{
+		row = (COOQLRow_clientDetail)iterator.next();
+		totalUpdateCount += row.getPendingUpdateCount();
+	}
+```
 
 Update Example:
 
+TBD
 
 Delete Example:
 
+TBD
 
 For more examples, information about commercial licensing and access to the larger guide, please visit our COOQL page at onbalancetech.com/COOQL.
