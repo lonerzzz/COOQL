@@ -7,7 +7,9 @@ The primary purpose of COOQL is to avoid runtime CQL errors and data type errors
 
 For example, the following statements can cause readily cause errors that are only detected at runtime
 
+```
 resultSet.getInt( "name" );	// Where 'name' is text and not an integer.
+```
 
 ## What COOQL is:
 
