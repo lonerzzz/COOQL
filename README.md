@@ -32,9 +32,7 @@ Use of the API should be generally intuitive. It is most effectively used with a
 
 ## Using COOQL
 
-So here is how you use COOQL:
-
-Assuming the dependencies are met:
+So here is how you use COOQL assuming the following dependencies are met:
 
 ```
 asm-4.0.jar
