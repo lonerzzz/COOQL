@@ -139,6 +139,32 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		return XpopulateObjectMap( objectMapToPopulate, mapObjectKeyClass, mapObjectValueClass, objectClassList );
 	}
 
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public final Map populateObjectMap( Class objectMapClass )
+	{
+		Map<Object,Object> objectMapToPopulate;
+		try
+		{
+			objectMapToPopulate = (Map)objectMapClass.newInstance();
+		}
+		catch (InstantiationException | IllegalAccessException iaeie)
+		{
+			iaeie.printStackTrace(); //TODO Make friendlier
+			return null;
+		}
+
+		return XpopulateObjectMap( objectMapToPopulate );
+	}
+
+	@SuppressWarnings({ "rawtypes" })
+	public final Map populateObjectMap( Map objectMapToPopulate )
+	{
+		if (objectMapToPopulate == null) throw new IllegalArgumentException( "The map to be populated must be non-null.");
+		objectMapToPopulate.clear();
+
+		return XpopulateObjectMap( objectMapToPopulate );
+	}
+
 	private float XcheckRangeDoubleToFloat( double value, String methodName )
 	{
 		if ((value < Float.MIN_VALUE) || (value > Float.MAX_VALUE))
@@ -497,6 +523,9 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		return objectListToPopulate;
 	}
 
+	/**
+	 * Populates a map using one column value as key and the other column value as the value
+	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private Map XpopulateObjectMap( Map objectMapToPopulate, Class mapObjectKeyClass, Class mapObjectValueClass,
 			Class<? extends COOQLUDTValue>[] objectClassList )
@@ -524,11 +553,143 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 				else valueObject = XpopulateObject( row, mapObjectValueClass.newInstance(), objectClassList );
 				objectMapToPopulate.put( keyObject, valueObject );
 			}
-			catch (InstantiationException|IllegalAccessException ieiae)
+			catch (InstantiationException | IllegalAccessException ieiae)
 			{
 				ieiae.printStackTrace(); //TODO Convert to friendlier error
 				return null;
 			}
+		}
+
+		return objectMapToPopulate;
+	}
+
+	/**
+	 * Populates a map using the column names as keys and column values as values
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Map XpopulateObjectMap( Map objectMapToPopulate )
+	{
+		Iterator<Row> iterator = resultSet.iterator();
+		classListIndex = 0;
+		COOQLRow row = XcreateRow( iterator.next() );
+		Object valueObject;
+		String keyString;
+
+		ColumnDefinitions columnDefinitionList = row.getColumnDefinitions();
+		for (int i=0; i<columnDefinitionList.size(); i++)
+		{
+			keyString = columnDefinitionList.getName( i );
+			valueObject = null;
+			switch (columnDefinitionList.getType( i ).getName())
+			{
+				case ASCII:
+				{
+					valueObject = row.getString( i );
+					break;
+				}
+				case BIGINT:
+				{
+					valueObject = row.getLong( i );
+					break;
+				}
+				case BLOB:
+				{
+					valueObject = row.getBytes( i );
+					break;
+				}
+				case BOOLEAN:
+				{
+					valueObject = row.getBool( i );
+					break;
+				}
+				case COUNTER:
+				{
+					break;
+				}
+				case CUSTOM:
+				{
+					break;
+				}
+				case DECIMAL:
+				{
+					valueObject = row.getDecimal( i );
+					break;
+				}
+				case DOUBLE:
+				{
+					valueObject = row.getDouble( i );
+					break;
+				}
+				case FLOAT:
+				{
+					valueObject = row.getFloat( i );
+					break;
+				}
+				case INET:
+				{
+					valueObject = row.getInet( i );
+					break;
+				}
+				case INT:
+				{
+					valueObject = row.getInt( i );
+					break;
+				}
+				case LIST:
+				{
+					break;
+				}
+				case MAP:
+				{
+					break;
+				}
+				case SET:
+				{
+					break;
+				}
+				case TEXT:
+				{
+					valueObject = row.getString( i );
+					break;
+				}
+				case TIMESTAMP:
+				{
+					valueObject = row.getDate( i );
+					break;
+				}
+				case TIMEUUID:
+				{
+					valueObject = row.getUUID( i );
+					break;
+				}
+				case TUPLE:
+				{
+					valueObject = row.getTupleValue( i );
+					break;
+				}
+				case UDT:
+				{
+					valueObject = row.getUDTValue( i );
+					break;
+				}
+				case UUID:
+				{
+					valueObject = row.getUUID( i );
+					break;
+				}
+				case VARCHAR:
+				{
+					valueObject = row.getString( i );
+					break;
+				}
+				case VARINT:
+				{
+					valueObject = row.getVarint( i );
+					break;
+				}
+			}
+
+			if (valueObject != null) objectMapToPopulate.put( keyString, valueObject );
 		}
 
 		return objectMapToPopulate;
