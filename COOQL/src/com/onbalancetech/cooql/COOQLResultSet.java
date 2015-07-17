@@ -338,17 +338,23 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		Name dataType = columnDefinitionList.getType( queriedColumn ).getName();
 		if (objectClass.equals(Boolean.class))
 		{
-			if (dataType.equals(Name.BOOLEAN)) return new Boolean( row.getBool( queriedColumn ) );
+			if (dataType.equals(Name.BOOLEAN))
+			{
+				Boolean dataValue = row.getBool( queriedColumn );
+				return (dataValue == null)?null:dataValue;
+			}
 		}
 		else if (objectClass.equals(Byte.class))
 		{
 			if (dataType.equals(Name.INT))
 			{
-				return new Short( XcheckRangeIntegerToByte( row.getInt( queriedColumn ), POPULATE_OBJECT ) );
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:new Byte( XcheckRangeIntegerToByte( dataValue, POPULATE_OBJECT ) );
 			}
 			else if (dataType.equals(Name.BIGINT))
 			{
-				return new Short( XcheckRangeLongToByte( row.getLong( queriedColumn ), POPULATE_OBJECT ) );
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:new Byte( XcheckRangeLongToByte( dataValue, POPULATE_OBJECT ) );
 			}
 		}
 		else if (objectClass.equals(ByteBuffer.class))
@@ -361,50 +367,101 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		}
 		else if (objectClass.equals(Double.class))
 		{
-			if (dataType.equals(Name.BIGINT)) return new Double( row.getLong( queriedColumn ) );
-			else if (dataType.equals(Name.DOUBLE)) return new Double( row.getDouble( queriedColumn ) );
-			else if (dataType.equals(Name.FLOAT)) return new Double( row.getFloat( queriedColumn ) );
-			else if (dataType.equals(Name.INT)) return new Double( row.getInt( queriedColumn ) );
+			if (dataType.equals(Name.BIGINT))
+			{
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:new Double( dataValue );
+			}
+			else if (dataType.equals(Name.DOUBLE))
+			{
+				Double dataValue = row.getDouble( queriedColumn );
+				return (dataValue == null)?null:dataValue;
+			}
+			else if (dataType.equals(Name.FLOAT))
+			{
+				Float dataValue = row.getFloat( queriedColumn );
+				return (dataValue == null)?null:new Double( dataValue );
+			}
+			else if (dataType.equals(Name.INT))
+			{
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:new Double( dataValue );
+			}
 		}
 		else if (objectClass.equals(Float.class))
 		{
 			if (dataType.equals(Name.DOUBLE))
 			{
-				return new Double( XcheckRangeDoubleToFloat( row.getDouble( queriedColumn ), POPULATE_OBJECT ) );
+				Double dataValue = row.getDouble( queriedColumn );
+				return (dataValue == null)?null:new Double( XcheckRangeDoubleToFloat( dataValue, POPULATE_OBJECT ) );
 			}
-			if (dataType.equals(Name.BIGINT)) return new Float( row.getLong( queriedColumn ) );
-			else if (dataType.equals(Name.FLOAT)) return new Float( row.getFloat( queriedColumn ) );
-			else if (dataType.equals(Name.INT)) return new Float( row.getInt( queriedColumn ) );
-			
+			if (dataType.equals(Name.BIGINT))
+			{
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:new Float( dataValue );
+			}
+			else if (dataType.equals(Name.FLOAT))
+			{
+				Float dataValue = row.getFloat( queriedColumn );
+				return (dataValue == null)?null:dataValue;
+			}
+			else if (dataType.equals(Name.INT))
+			{
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:new Float( dataValue );
+			}
 		}
 		else if (objectClass.equals(Integer.class))
 		{
 			if (dataType.equals(Name.BIGINT))
 			{
-				return new Integer( XcheckRangeLongToInteger( row.getLong( queriedColumn ), POPULATE_OBJECT ) );
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:new Integer( XcheckRangeLongToInteger( dataValue, POPULATE_OBJECT ) );
 			}
-			else if (dataType.equals(Name.INT)) return new Integer( row.getInt( queriedColumn ) );
+			else if (dataType.equals(Name.INT))
+			{
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:dataValue;
+			}
 		}
 		else if (objectClass.equals(Long.class))
 		{
-			if (dataType.equals(Name.BIGINT)) return new Long( row.getLong( queriedColumn ) );
-			else if (dataType.equals(Name.INT)) return new Long( row.getInt( queriedColumn ) );
-			else if (dataType.equals(Name.TIMESTAMP)) return new Long( row.getDate( queriedColumn ).getTime() );
+			if (dataType.equals(Name.BIGINT))
+			{
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:dataValue;
+			}
+			else if (dataType.equals(Name.INT))
+			{
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:new Long( dataValue );
+			}
+			else if (dataType.equals(Name.TIMESTAMP))
+			{
+				Date dataValue = row.getDate( queriedColumn );
+				return (dataValue == null)?null:new Long( dataValue.getTime() );
+			}
 		}
 		else if (objectClass.equals(Short.class))
 		{
 			if (dataType.equals(Name.BIGINT))
 			{
-				return new Short( XcheckRangeLongToShort( row.getLong( queriedColumn ), POPULATE_OBJECT ) );
+				Long dataValue = row.getLong( queriedColumn );
+				return (dataValue == null)?null:new Short( XcheckRangeLongToShort( dataValue, POPULATE_OBJECT ) );
 			}
 			else if (dataType.equals(Name.INT))
 			{
-				return new Short( XcheckRangeIntegerToShort( row.getInt( queriedColumn ), POPULATE_OBJECT ) );
+				Integer dataValue = row.getInt( queriedColumn );
+				return (dataValue == null)?null:new Short( XcheckRangeIntegerToShort( dataValue, POPULATE_OBJECT ) );
 			}
 		}
 		else if (objectClass.equals(String.class))
 		{
-			if (dataType.equals(Name.VARCHAR)) return new String( row.getString( queriedColumn ) );
+			if (dataType.equals(Name.VARCHAR))
+			{
+				String dataValue = row.getString( queriedColumn );
+				return (dataValue == null)?null:new String( dataValue );
+			}
 		}
 		else
 		{

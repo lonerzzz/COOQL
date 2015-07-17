@@ -91,7 +91,7 @@ public class COOQLBuilder
 			COOQLBuilder.buildSelectOperators( tableMetadata, workingBuffer, packageName );
 			COOQLBuilder.buildSelectOrderBy( tableMetadata, workingBuffer, packageName );
 			COOQLBuilder.buildSelectOrderByDirection( tableMetadata, workingBuffer, packageName );
-			COOQLBuilder.buildSelectOrderByOperator( tableMetadata, workingBuffer, packageName );
+			COOQLBuilder.buildSelectOrderByOperators( tableMetadata, workingBuffer, packageName );
 			COOQLBuilder.buildSelectValues( tableMetadata, workingBuffer, packageName );
 			COOQLBuilder.buildSelectWheres( tableMetadata, workingBuffer, packageName );
 			COOQLBuilder.buildUpdateOperators( tableMetadata, workingBuffer, packageName );
@@ -678,25 +678,23 @@ public class COOQLBuilder
 		List<ColumnMetadata> clusteringKeyComponentList = tableMetadata.getClusteringColumns();
 		if (clusteringKeyComponentList.size() == 0) return; // No clustering column to order by so exit
 
-		List<ColumnMetadata> partitionKeyComponentList = tableMetadata.getPartitionKey();
 		String tableName = tableMetadata.getName();
 		String scopedTableName;
-
-		int cc = 0;
+		String clusteringKeyComponent;
+		String classType = SelectOrderBy.class.getSimpleName();
+		
+		int cc = 1;
 		do
 		{
-			String classType = SelectOrderBy.class.getSimpleName();
-			String suffix = buildPartitionSuffix( partitionKeyComponentList );
+			String suffix = "_BY";
 			for (int c=0; c<cc; c++)
 			{
-				suffix += "_AND_";
+				suffix += "_";
 				suffix += clusteringKeyComponentList.get( c ).getName();
 			}
 			scopedTableName = tableName+suffix;
-			String selectOrderByOperatorType = buildClassName( SelectOrderByOperator.class.getSimpleName(), tableName );
+			String selectOrderByOperatorType = buildClassName( SelectOrderByOperator.class.getSimpleName(), scopedTableName );
 
-			String clusteringKeyComponent;
-			
 			workingBuffer.setLength( 0 );
 			addPackage( workingBuffer, packageName );
 			addCOOQLImport( workingBuffer );
@@ -710,12 +708,12 @@ public class COOQLBuilder
 
 			addConstructor( workingBuffer, classType, scopedTableName );
 
-			if (cc < clusteringKeyComponentList.size())
+			if (cc <= clusteringKeyComponentList.size())
 			{
-				clusteringKeyComponent = clusteringKeyComponentList.get( cc ).getName();
+				clusteringKeyComponent = clusteringKeyComponentList.get( cc -1 ).getName();
 				addBlankLine( workingBuffer );
 				addMethodHeader( workingBuffer, PUBLIC, selectOrderByOperatorType, "_"+clusteringKeyComponent, null );
-				addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" \\\"", clusteringKeyComponent, "\\\"\" );" );
+				addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \""+((cc -1 > 0)?",":"")+" \\\"", clusteringKeyComponent, "\\\"\" );" );
 				addMethodContent( workingBuffer, "return new ", selectOrderByOperatorType, "( XgetCOOQL() );" );
 				addMethodFooter( workingBuffer );
 			}
@@ -729,42 +727,71 @@ public class COOQLBuilder
 		while (cc++ < clusteringKeyComponentList.size());
 	}
 
-	static final void buildSelectOrderByOperator( TableMetadata tableMetadata, StringBuilder workingBuffer, String packageName )
+	static final void buildSelectOrderByOperators( TableMetadata tableMetadata, StringBuilder workingBuffer, String packageName )
 	{
+		List<ColumnMetadata> clusteringKeyComponentList = tableMetadata.getClusteringColumns();
 		String classType = SelectOrderByOperator.class.getSimpleName();
 		String tableName = tableMetadata.getName();
 		String selectOrderByDirectionType = buildClassName( SelectOrderByDirection.class.getSimpleName(), tableName );
+		String clusteringKeyComponent;
+		String scopedTableName;
 		
-		workingBuffer.setLength( 0 );
-		addPackage( workingBuffer, packageName );
-		addBlankLine( workingBuffer );
-		addCOOQLImport( workingBuffer );
-		addBlankLine( workingBuffer );
-		addClassTypeImport( workingBuffer, classType );
-		addBlankLine( workingBuffer );
+		int cc = Math.min( 1, clusteringKeyComponentList.size() );
+		do
+		{
+			String suffix = "_BY";
+			for (int c=0; c<cc; c++)
+			{
+				suffix += "_";
+				suffix += clusteringKeyComponentList.get( c ).getName();
+			}
+			scopedTableName = tableName+suffix;
 
-		setIndentation( 0 );
-		addClassHeader( workingBuffer, PUBLIC, classType, tableName );
-
-		setIndentation( 1 );
-
-		addConstructor( workingBuffer, classType, tableName );
-
-		addMethodHeader( workingBuffer, PUBLIC, selectOrderByDirectionType, "ASC", null );
-		addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" ASC\" );" );
-		addMethodContent( workingBuffer, "return new ", selectOrderByDirectionType, "( XgetCOOQL() );" );
-		addMethodFooter( workingBuffer );
-
-		addMethodHeader( workingBuffer, PUBLIC, selectOrderByDirectionType, "DESC", null );
-		addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" DESC\" );" );
-		addMethodContent( workingBuffer, "return new ", selectOrderByDirectionType, "( XgetCOOQL() );" );
-		addMethodFooter( workingBuffer );
-
-		addExecuteQuery( workingBuffer, tableName );
-
-		addClassFooter( workingBuffer );
-
-		writeClassFile( packageName, classType, tableName, workingBuffer.toString() );
+			workingBuffer.setLength( 0 );
+			addPackage( workingBuffer, packageName );
+			addBlankLine( workingBuffer );
+			addCOOQLImport( workingBuffer );
+			addBlankLine( workingBuffer );
+			addClassTypeImport( workingBuffer, classType );
+			addBlankLine( workingBuffer );
+	
+			setIndentation( 0 );
+			addClassHeader( workingBuffer, PUBLIC, classType, scopedTableName );
+	
+			setIndentation( 1 );
+	
+			addConstructor( workingBuffer, classType, scopedTableName );
+			addBlankLine( workingBuffer );
+	
+			if (cc < clusteringKeyComponentList.size())
+			{
+				String selectOrderByOperatorType = buildClassName( SelectOrderByOperator.class.getSimpleName(), scopedTableName );
+				clusteringKeyComponent = clusteringKeyComponentList.get( cc ).getName();
+				addMethodHeader( workingBuffer, PUBLIC, selectOrderByOperatorType, "_"+clusteringKeyComponent, null );
+				addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \""+((cc > 0)?",":"")+" \\\"", clusteringKeyComponent, "\\\"\" );" );
+				addMethodContent( workingBuffer, "return new ", selectOrderByOperatorType, "( XgetCOOQL() );" );
+				addMethodFooter( workingBuffer );
+				addBlankLine( workingBuffer );
+			}
+	
+			addMethodHeader( workingBuffer, PUBLIC, selectOrderByDirectionType, "ASC", null );
+			addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" ASC\" );" );
+			addMethodContent( workingBuffer, "return new ", selectOrderByDirectionType, "( XgetCOOQL() );" );
+			addMethodFooter( workingBuffer );
+			addBlankLine( workingBuffer );
+	
+			addMethodHeader( workingBuffer, PUBLIC, selectOrderByDirectionType, "DESC", null );
+			addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" DESC\" );" );
+			addMethodContent( workingBuffer, "return new ", selectOrderByDirectionType, "( XgetCOOQL() );" );
+			addMethodFooter( workingBuffer );
+	
+			addExecuteQuery( workingBuffer, tableName );
+	
+			addClassFooter( workingBuffer );
+	
+			writeClassFile( packageName, classType, scopedTableName, workingBuffer.toString() );
+		}
+		while (cc++ < clusteringKeyComponentList.size());
 	}
 
 	static final void buildSelectOrderByDirection( TableMetadata tableMetadata, StringBuilder workingBuffer, String packageName )
@@ -1308,7 +1335,6 @@ public class COOQLBuilder
 			scopedTableName = tableName+suffix;
 
 			String whereType = buildClassName( classMajorType+Where.class.getSimpleName(), scopedTableName );
-			String orderByType = buildClassName( classMajorType+OrderBy.class.getSimpleName(), scopedTableName );
 			
 			workingBuffer.setLength( 0 );
 			addPackage( workingBuffer, packageName );
@@ -1330,17 +1356,27 @@ public class COOQLBuilder
 				addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" AND\" );" );
 				addMethodContent( workingBuffer, "return new ", whereType, "( XgetCOOQL() );" );
 				addMethodFooter( workingBuffer );
+			}
 
-				if (classMajorType == "Select")
+			if ((clusteringKeyComponentList.size() > 0) && (cc <= clusteringKeyComponentList.size()) && ("Select".equals( classMajorType )))	// Without clustering components, these operations are not possible
+			{
+				suffix = "_BY";
+				int limit = Math.max( (clusteringKeyComponentList.size() > 0)?1:0, cc);
+				for (int c=0; c<limit; c++)
 				{
-					addBlankLine( workingBuffer );
-					addMethodHeader( workingBuffer, PUBLIC, orderByType, "ORDER_BY", null );
-					addMethodContent( workingBuffer, orderByType, " orderBy" );
-					addMethodContent( workingBuffer, "\t\t= new ", orderByType, "( XgetCOOQL() );" );
-					addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" \"+orderBy.toString() );" );
-					addMethodContent( workingBuffer, "return orderBy;" );
-					addMethodFooter( workingBuffer );
+					suffix += "_";
+					suffix += clusteringKeyComponentList.get( c ).getName();
 				}
+
+				String orderByType = buildClassName( classMajorType+OrderBy.class.getSimpleName(), tableName+suffix );
+
+				addBlankLine( workingBuffer );
+				addMethodHeader( workingBuffer, PUBLIC, orderByType, "ORDER_BY", null );
+				addMethodContent( workingBuffer, orderByType, " orderBy" );
+				addMethodContent( workingBuffer, "\t\t= new ", orderByType, "( XgetCOOQL() );" );
+				addMethodContent( workingBuffer, COOQL.class.getSimpleName(), ".getDataHolder().getBuffer().append( \" \"+orderBy.toString() );" );
+				addMethodContent( workingBuffer, "return orderBy;" );
+				addMethodFooter( workingBuffer );
 			}
 
 			if (classMajorType == "Select")
