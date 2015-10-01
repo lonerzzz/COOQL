@@ -275,8 +275,10 @@ public class COOQLBuilder
 		addBlankLine( workingBuffer );
 		addImport( workingBuffer, "com.datastax.driver.core.Row" );
 		addImport( workingBuffer, "com.datastax.driver.core.UDTValue" );
+		addCOOQLImport( workingBuffer );
 		addClassTypeImport( workingBuffer, COOQLResultSet.class.getSimpleName() );
 		addClassTypeImport( workingBuffer, COOQLRow.class.getSimpleName() );
+		addClassTypeImport( workingBuffer, COOQL.class.getSimpleName()+".DataHolder" );
 		addClassTypeImport( workingBuffer, TypeConverter.class.getSimpleName() );
 		addBlankLine( workingBuffer );
 		setIndentation( 0 );
@@ -290,7 +292,7 @@ public class COOQLBuilder
 		addMethodFooter( workingBuffer );
 
 		// Add column inclusions
-		String columnName, accessorMethod = null, returnType;
+		String columnName, accessorMethod = null, returnType, returnType2;
 		Iterator<ColumnMetadata> columnIterator = tableMetadata.getColumns().iterator();
 		ColumnMetadata columnMetadata;
 
@@ -317,7 +319,8 @@ public class COOQLBuilder
 			addMethodFooter( workingBuffer );
 
 			addBlankLine( workingBuffer );
-			addMethodHeader( workingBuffer, PUBLIC, "Object", "get"+capitalize( columnName )+"AsType", "TypeConverter converter" );
+			returnType2 = getTypeFromValidator( columnMetadata.getType(), false );
+			addMethodHeader( workingBuffer, PUBLIC, "Object", "getConverted"+capitalize( columnName ), null );
 			if ((returnType.startsWith( "List" )) && (returnType.indexOf("UDTValue") != -1))
 			{
 				addMethodContent( workingBuffer, "List returnList = wrapUDTValueList( row.getList( \"\\\"", columnName, "\\\"\", UDTValue.class ), " );
@@ -328,8 +331,10 @@ public class COOQLBuilder
 			else
 			{
 				accessorMethod = getAccessorMethodByType( columnName, returnType, true );
-				addMethodContent( workingBuffer, "Object sourceObject = row.", accessorMethod );
-				addMethodContent( workingBuffer, "return converter.convert( sourceObject );" );
+				addMethodContent( workingBuffer, "DataHolder dh = ", COOQL.class.getSimpleName(), ".getDataHolder();" );
+				addMethodContent( workingBuffer, "TypeConverter tc =  dh.getConverter( \"", tableName, "\", \"", columnName, "\" );" );
+				addMethodContent( workingBuffer, returnType+" sourceObject = row.", accessorMethod );
+				addMethodContent( workingBuffer, "return tc.convertFromStorageFormat( sourceObject );" );
 			}
 			addMethodFooter( workingBuffer );
 		}
@@ -558,9 +563,11 @@ public class COOQLBuilder
 		addImport( workingBuffer, "java.nio.ByteBuffer" );
 		addImport( workingBuffer, "java.util.Date" );
 		addImport( workingBuffer, "java.util.List" );
+		addImport( workingBuffer, "java.util.Map" );
 		addBlankLine( workingBuffer );
 		addCOOQLImport( workingBuffer );
 		addClassTypeImport( workingBuffer, COOQL.class.getSimpleName()+".DataHolder" );
+		addClassTypeImport( workingBuffer, TypeConverter.class.getSimpleName() );
 		addClassTypeImport( workingBuffer, classType );
 		addBlankLine( workingBuffer );
 
@@ -944,9 +951,11 @@ public class COOQLBuilder
 		addImport( workingBuffer, "java.nio.ByteBuffer" );
 		addImport( workingBuffer, "java.util.Date" );
 		addImport( workingBuffer, "java.util.List" );
+		addImport( workingBuffer, "java.util.Map" );
 		addBlankLine( workingBuffer );
 		addCOOQLImport( workingBuffer );
 		addClassTypeImport( workingBuffer, COOQL.class.getSimpleName()+".DataHolder" );
+		addClassTypeImport( workingBuffer, TypeConverter.class.getSimpleName() );
 		addClassTypeImport( workingBuffer, classType );
 		addBlankLine( workingBuffer );
 
@@ -1035,6 +1044,15 @@ public class COOQLBuilder
 					|| (isKeyColumn( columnName, clusteringKeyComponentList ))) continue;
 			addBlankLine( workingBuffer );
 			dataType = getTypeFromValidator( columnMetadata.getType(), true );
+			if (dataType.equals( "Date" ))
+			{
+				addMethodHeader( workingBuffer, PUBLIC, classType+"_"+tableName, "_"+columnName,
+						"long "+columnName );
+				addMethodContent( workingBuffer, "return _", columnName, "( new Date( ", columnName, " ) );" );
+				addMethodFooter( workingBuffer );
+				addBlankLine( workingBuffer );
+			}
+
 			addMethodHeader( workingBuffer, PUBLIC, classType+"_"+tableName, "_"+columnName,
 					dataType+" "+columnName );
 			addMethodContent( workingBuffer, "DataHolder dh = ", COOQL.class.getSimpleName(), ".getDataHolder();" );
@@ -1066,14 +1084,23 @@ public class COOQLBuilder
 				addMethodFooter( workingBuffer );
 			}
 
-			if (dataType.equals( "Date" ))
+			addBlankLine( workingBuffer );
+			addMethodHeader( workingBuffer, PUBLIC, classType+"_"+tableName, "_"+columnName+"_WITH",
+					"Object "+columnName );
+			addMethodContent( workingBuffer, "DataHolder dh = ", COOQL.class.getSimpleName(), ".getDataHolder();" );
+			addMethodContent( workingBuffer, "TypeConverter tc =  dh.getConverter( \"", tableName, "\", \"", columnName, "\" );" );
+			addMethodContent( workingBuffer, "if (tc == null) throw new IllegalStateException( \"No type converter defined for table '",
+					tableName, "', column '", columnName, "'\" );" );
+			addMethodContent( workingBuffer, "dh.getBuffer().append( dh.addColumn( \"\\\"", columnName, "\\\"\" )+\"", operationSuffix, "\" );" );
+			parameterListEntry = columnName;
+			if (dataType2.startsWith( "ListType" ))
 			{
-				addBlankLine( workingBuffer );
-				addMethodHeader( workingBuffer, PUBLIC, classType+"_"+tableName, "_"+columnName,
-						"long "+columnName );
-				addMethodContent( workingBuffer, "return _", columnName, "( new Date( ", columnName, " ) );" );
-				addMethodFooter( workingBuffer );
+				parameterListEntry =  "toByteArrayList( "+columnName+" ) ";
 			}
+			addMethodContent( workingBuffer, "dh.getParameterList().add( tc.convertToStorageFormat( ",
+					parameterListEntry, " ) );" );
+			addMethodContent( workingBuffer, "return this;" );
+			addMethodFooter( workingBuffer );
 		}
 	}
 
@@ -1271,17 +1298,6 @@ public class COOQLBuilder
 			addMethodContent( workingBuffer, "dh.getBuffer().append( dh.addColumn( \"\\\"", columnName, "\\\"\" )+\",\" );" );
 			addMethodContent( workingBuffer, "return this;" );
 			addMethodFooter( workingBuffer );
-
-			if (classMajorType.equals( Select.class.getSimpleName() ))
-			{
-				addBlankLine( workingBuffer );
-				addMethodHeader( workingBuffer, PUBLIC, classType+"_"+tableName, "_"+columnName, TypeConverter.class.getSimpleName()+" converter" );
-				addMethodContent( workingBuffer, "DataHolder dh = ", COOQL.class.getSimpleName(), ".getDataHolder();" );
-				addMethodContent( workingBuffer, "dh.registerConverter( \""+tableName+"\", \""+columnName+"\", converter );" );
-				addMethodContent( workingBuffer, "dh.getBuffer().append( dh.addColumn( \"\\\"", columnName, "\\\"\" )+\",\" );" );
-				addMethodContent( workingBuffer, "return this;" );
-				addMethodFooter( workingBuffer );
-			}
 		}
 
 		// Add where clause

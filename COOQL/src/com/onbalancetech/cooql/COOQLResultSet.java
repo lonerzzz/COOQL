@@ -5,6 +5,7 @@ import static com.datastax.driver.core.DataType.Name;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,15 +20,35 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 {
 	private static final String POPULATE_OBJECT = "populateObject";
 	private int classListIndex;
-	protected Map<String,Map<String,TypeConverter>> converterMap;
+	private DataHolder dataHolder;
 	protected ResultSet resultSet;
 	protected Set<String> queriedColumnSet;
+
+	private static final Map<Class,Class> equivalentClassMapping = new HashMap<Class,Class>();
+
+	static
+	{
+		equivalentClassMapping.put( Boolean.class, boolean.class );
+		equivalentClassMapping.put( Byte.class, byte.class );
+		equivalentClassMapping.put( Double.class, double.class );
+		equivalentClassMapping.put( Float.class, float.class );
+		equivalentClassMapping.put( Integer.class, int.class );
+		equivalentClassMapping.put( Long.class, long.class );
+		equivalentClassMapping.put( Short.class, short.class );
+		equivalentClassMapping.put( boolean.class, Boolean.class );
+		equivalentClassMapping.put( byte.class, float.class );
+		equivalentClassMapping.put( double.class, double.class );
+		equivalentClassMapping.put( float.class, Float.class );
+		equivalentClassMapping.put( int.class, Integer.class );
+		equivalentClassMapping.put( long.class, Long.class );
+		equivalentClassMapping.put( short.class, Short.class );
+	}
 	
 	protected COOQLResultSet( ResultSet resultSet, DataHolder dataHolder )
 	{
 		this.resultSet = resultSet;
+		this.dataHolder = dataHolder;
 		this.queriedColumnSet = dataHolder.getQueryColumnSet();
-		this.converterMap = dataHolder.getConverterMap();
 	}
 
 	public long getCount()
@@ -224,8 +245,8 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		return ((queriedColumnSet.contains( columnName )) || (queriedColumnSet.contains( "*" )));
 	}
 
-	private Object XconvertToObjectType( String methodName, Object sourceObject,
-			@SuppressWarnings("rawtypes") Class destinationParameterType,
+	private Object XconvertToObjectType( String tableName, String columnName, String methodName,
+			Object sourceObject, @SuppressWarnings("rawtypes") Class destinationParameterType,
 			Class<? extends COOQLUDTValue>[] objectClassList )
 	{
 		if (sourceObject == null) return null;
@@ -316,11 +337,23 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 				}
 			}
 		}
-		else if (!destinationParameterType.isInstance( sourceObject ))
+
+		DataHolder dataHolder = COOQL.getDataHolder();
+		@SuppressWarnings("rawtypes")
+		TypeConverter typeConverter;
+		Class equivalentClass;
+		if ((typeConverter = dataHolder.getConverter( tableName, columnName )) != null)
+		{
+			return typeConverter.convertFromStorageFormat( sourceObject );
+		}
+		else if (!(((equivalentClass = equivalentClassMapping.get( destinationParameterType )) != null) &&
+					((sourceObject.getClass().isAssignableFrom( equivalentClass ))) ||
+				(destinationParameterType.isInstance( sourceObject ))))
 		{
 			throw new RuntimeException( "Data type '"+sourceObject.getClass().getSimpleName()+"' for method '"
 					+methodName+"' is unsupported" );
 		}
+
 		return sourceObject;
 	}
 
@@ -466,37 +499,33 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 		else
 		{
 			String tableName = this.getClass().getSimpleName().substring( 15 );
-			Map<String,TypeConverter> fieldConverterMap = converterMap.get( tableName );
-			if (fieldConverterMap != null)
+			TypeConverter typeConverter = dataHolder.getConverter( tableName, queriedColumn );
+			if (typeConverter != null)
 			{
-				TypeConverter typeConverter = fieldConverterMap.get( queriedColumn );
-				if (typeConverter != null)
+				Object sourceObject = null;
+				switch (dataType)
 				{
-					Object sourceObject = null;
-					switch (dataType)
-					{
-						case BIGINT: sourceObject = row.getLong( queriedColumn ); break;
-						case BLOB: sourceObject = row.getBytes( queriedColumn ); break;
-						case BOOLEAN: sourceObject = row.getBool( queriedColumn ); break;
-						case DECIMAL: sourceObject = row.getDecimal( queriedColumn ); break;
-						case DOUBLE: sourceObject = row.getDouble( queriedColumn ); break;
-						case FLOAT: sourceObject = row.getFloat( queriedColumn ); break;
-						case INET: sourceObject = row.getInet( queriedColumn ); break;
-						case INT: sourceObject = row.getInt( queriedColumn ); break;
-						case TEXT: sourceObject = row.getString( queriedColumn ); break;
-						case TIMESTAMP: sourceObject = row.getDate( queriedColumn ); break;
-						case TUPLE: sourceObject = row.getTupleValue( queriedColumn ); break;
-						case UUID: sourceObject = row.getUUID( queriedColumn ); break;
-						case UDT: sourceObject = row.getUDTValue( queriedColumn ); break;
-						case VARCHAR: sourceObject = row.getString( queriedColumn ); break;
-						case VARINT: sourceObject = row.getVarint( queriedColumn ); break;
-					}
-					
-					if (sourceObject != null)
-					{
-						Object returnObject = typeConverter.convert( sourceObject );
-						if (returnObject != null) return returnObject;
-					}
+					case BIGINT: sourceObject = row.getLong( queriedColumn ); break;
+					case BLOB: sourceObject = row.getBytes( queriedColumn ); break;
+					case BOOLEAN: sourceObject = row.getBool( queriedColumn ); break;
+					case DECIMAL: sourceObject = row.getDecimal( queriedColumn ); break;
+					case DOUBLE: sourceObject = row.getDouble( queriedColumn ); break;
+					case FLOAT: sourceObject = row.getFloat( queriedColumn ); break;
+					case INET: sourceObject = row.getInet( queriedColumn ); break;
+					case INT: sourceObject = row.getInt( queriedColumn ); break;
+					case TEXT: sourceObject = row.getString( queriedColumn ); break;
+					case TIMESTAMP: sourceObject = row.getDate( queriedColumn ); break;
+					case TUPLE: sourceObject = row.getTupleValue( queriedColumn ); break;
+					case UUID: sourceObject = row.getUUID( queriedColumn ); break;
+					case UDT: sourceObject = row.getUDTValue( queriedColumn ); break;
+					case VARCHAR: sourceObject = row.getString( queriedColumn ); break;
+					case VARINT: sourceObject = row.getVarint( queriedColumn ); break;
+				}
+				
+				if (sourceObject != null)
+				{
+					Object returnObject = typeConverter.convertFromStorageFormat( sourceObject );
+					if (returnObject != null) return returnObject;
 				}
 			}
 		}
@@ -506,29 +535,32 @@ public abstract class COOQLResultSet implements Iterable<COOQLRow>
 	}
 
 	@SuppressWarnings("unchecked")
-	private Object XpopulateObject( Object sourceObject, Object objectToPopulate,
+	private Object XpopulateObject( Object sourceObject, Object objectToPopulate, 
 			Class<? extends COOQLUDTValue>... objectClassList )
 	{
 		List<String> methodNameList = new ArrayList<String>(); //TODO Make static
 		MethodAccess objectGetterAccessor = MethodAccess.get( sourceObject.getClass() );
 		MethodAccess objectSetterAccessor = MethodAccess.get( objectToPopulate.getClass() );
 		String setterMethodName, columnName;
+		String tableName = this.getClass().getSimpleName();
+		tableName = tableName.substring( tableName.indexOf( "_" )+1 );
 		boolean nullObject = false;
 		
 		objectGetterAccessor.getGetterMethodNameList( methodNameList );
 		for (int i = methodNameList.size() -1; i>=0; i--)
 		{
 			columnName = methodNameList.get( i ).substring( 3 );
-			columnName = "\""+columnName.substring( 0, 1 ).toLowerCase() + columnName.substring( 1 ) + "\"";
-			if ((XcontainsColumn( columnName )) &&
+			columnName = columnName.substring( 0, 1 ).toLowerCase() + columnName.substring( 1 );
+			if ((XcontainsColumn( "\""+columnName + "\"" )) &&
 				((setterMethodName = objectSetterAccessor.getMatchingSetter( methodNameList.get( i ) )) != null))
 			{
 				try
 				{
 					Object retrievedValue = objectGetterAccessor.invoke( sourceObject, methodNameList.get( i ) );
 					nullObject = (retrievedValue == null);
-					objectSetterAccessor.invoke( objectToPopulate, setterMethodName, 	XconvertToObjectType( methodNameList.get( i ),
-							retrievedValue, objectSetterAccessor.getParameterType( setterMethodName ), objectClassList ) );
+					objectSetterAccessor.invoke( objectToPopulate, setterMethodName, 	XconvertToObjectType( tableName, columnName,
+							methodNameList.get( i ), retrievedValue, objectSetterAccessor.getParameterType( setterMethodName ),
+							objectClassList ) );
 				}
 				catch (ClassCastException cce)
 				{

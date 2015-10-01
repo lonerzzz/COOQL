@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
@@ -22,6 +21,8 @@ public class COOQL
 	private static ThreadLocal<DataHolder> dataHolder = new ThreadLocal<DataHolder>();
 	private static Map<Session,Map<String,PreparedStatement>> preparedStatementMap
 		= new ConcurrentHashMap<Session,Map<String,PreparedStatement>>();
+	private static Map<String,Map<String,Class<? extends TypeConverter>>> converterClassMap
+		= new ConcurrentHashMap<String, Map<String,Class<? extends TypeConverter>>>();
 
 	private Session session;
 
@@ -29,9 +30,11 @@ public class COOQL
 	{
 		private StringBuffer sb;
 		private ArrayList<Object> parameterList;
+		@SuppressWarnings("rawtypes")
 		private Map<String,Map<String,TypeConverter>> converterMap;
 		private Set<String> queriedColumnSet;
 
+		@SuppressWarnings("rawtypes")
 		public DataHolder()
 		{
 			sb = new StringBuffer();
@@ -62,9 +65,35 @@ public class COOQL
 			parameterList.add( parameter );
 		}
 
-		public Map<String,Map<String,TypeConverter>> getConverterMap()
+		@SuppressWarnings("rawtypes")
+		public TypeConverter getConverter( String tableName, String columnName )
 		{
-			return converterMap;
+			Map<String, TypeConverter> typeConverterMap = converterMap.get( tableName );
+			Class<? extends TypeConverter> typeConverterClass;
+			TypeConverter typeConverter = null;
+			if ((typeConverterMap == null) || ((typeConverter = typeConverterMap.get( columnName ))) == null)
+			{
+				Map<String, Class<? extends TypeConverter>> typeConverterClassMap = converterClassMap.get( tableName );
+				if (typeConverterClassMap == null) return null;
+				typeConverterClass = typeConverterClassMap.get( columnName );
+				if (typeConverterClass == null) return null;
+				if (typeConverterMap == null)
+				{
+					typeConverterMap = new HashMap<String,TypeConverter>();
+					converterMap.put( tableName, typeConverterMap );
+				}
+
+				try
+				{
+					typeConverterMap.put( columnName, typeConverter = typeConverterClass.newInstance() );
+				}
+				catch (InstantiationException|IllegalAccessException e)
+				{
+					throw new RuntimeException( e );
+				}
+			}
+
+			return typeConverter;
 		}
 
 		public ArrayList<Object> getParameterList()
@@ -80,17 +109,6 @@ public class COOQL
 		public void clearQueryColumnSet()
 		{
 			queriedColumnSet.clear();
-		}
-
-		public void registerConverter( String tableName, String fieldName, TypeConverter converter )
-		{
-			Map<String,TypeConverter> fieldConverterMap;
-			if ((fieldConverterMap = converterMap.get( tableName )) == null)
-			{
-				fieldConverterMap = new HashMap<String,TypeConverter>(4);
-				converterMap.put( tableName, fieldConverterMap );
-			}
-			fieldConverterMap.put( fieldName, converter );
 		}
 	}
 
@@ -164,6 +182,18 @@ public class COOQL
 		}
 
 		return null;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void registerConverter( String tableName, String fieldName, Class<? extends TypeConverter> converterClass )
+	{
+		Map<String,Class<? extends TypeConverter>> fieldConverterMap;
+		if ((fieldConverterMap = converterClassMap.get( tableName )) == null)
+		{
+			fieldConverterMap = new HashMap<String, Class<? extends TypeConverter>>( 4 );
+			converterClassMap.put( tableName, fieldConverterMap );
+		}
+		fieldConverterMap.put( fieldName, converterClass );
 	}
 
 	protected void resetCommand()

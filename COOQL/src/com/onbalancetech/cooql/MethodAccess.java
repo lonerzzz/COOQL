@@ -339,14 +339,14 @@ public abstract class MethodAccess
 			if ((Modifier.isStatic( modifiers )) || (Modifier.isPrivate( modifiers ))) continue;
 			if ((method.getName().startsWith( "get" )) && (method.getParameterTypes().length == 0) && (method.getReturnType() != null))
 			{
-				if (!XisUnderstoodType( method.getReturnType() )) continue;
+				methods.add( method );
+//				if (!XisUnderstoodType( method.getReturnType() )) continue;
 			}
 			else if ((method.getName().startsWith( "set" )) && (method.getParameterTypes().length == 1) && (method.getReturnType() == void.class))
 			{
-				if (!XisUnderstoodType( method.getParameterTypes()[ 0 ] )) continue;
+				methods.add( method );
+//				if (!XisUnderstoodType( method.getParameterTypes()[ 0 ] )) continue;
 			}
-			else continue;
-			methods.add( method );
 		}
 	}
 
